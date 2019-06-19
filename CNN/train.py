@@ -12,7 +12,7 @@ EMBEDDING_DIM = 200
 CONV_NUM = 4
 DROPOUT = 0.55
 EPOCH = 40
-device = torch.device("cpu")  # GPU
+device = torch.device("cuda")  # GPU
 
 
 def main():
