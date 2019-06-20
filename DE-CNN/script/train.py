@@ -87,7 +87,7 @@ def valid_loss(model, valid_X, valid_y, crf=False):
     model.train()
     return sum(losses)/len(losses)
 
-def train(train_X, train_y, valid_X, valid_y, model, model_fn, optimizer, parameters, epochs=200, batch_size=128, crf=False):
+def train(train_X, train_y, valid_X, valid_y, model, model_fn, optimizer, parameters, epochs=250, batch_size=128, crf=False):
     best_loss=float("inf") 
     valid_history=[]
     train_history=[]
