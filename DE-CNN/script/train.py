@@ -73,7 +73,7 @@ class Model(torch.nn.Module):
                 score=-self.crf(x_logit, x_tag, x_mask)
             else:
                 x_logit=torch.nn.utils.rnn.pack_padded_sequence(x_logit, x_len, batch_first=True)
-                score=torch.nn.functional.nll_loss(torch.nn.functional.log_softmax(x_logit.data), x_tag.data)
+                score=torch.nn.functional.nll_loss(torch.nn.functional.log_softmax(x_logit.data, dim=1), x_tag.data)
         return score
 
 def valid_loss(model, valid_X, valid_y, crf=False):
@@ -82,7 +82,8 @@ def valid_loss(model, valid_X, valid_y, crf=False):
     for batch in batch_generator(valid_X, valid_y, crf=crf):
         batch_valid_X, batch_valid_y, batch_valid_X_len, batch_valid_X_mask=batch
         loss=model(batch_valid_X, batch_valid_X_len, batch_valid_X_mask, batch_valid_y)
-        losses.append(loss.data[0])
+        # losses.append(loss.data[0])
+        losses.append(loss.item())
     model.train()
     return sum(losses)/len(losses)
 
@@ -96,12 +97,16 @@ def train(train_X, train_y, valid_X, valid_y, model, model_fn, optimizer, parame
             loss=model(batch_train_X, batch_train_X_len, batch_train_X_mask, batch_train_y)
             optimizer.zero_grad()
             loss.backward()
-            torch.nn.utils.clip_grad_norm(parameters, 1.)
+            torch.nn.utils.clip_grad_norm_(parameters, 1.)
             optimizer.step()
         loss=valid_loss(model, train_X, train_y, crf=crf)
         train_history.append(loss)
         loss=valid_loss(model, valid_X, valid_y, crf=crf)
-        valid_history.append(loss)        
+        valid_history.append(loss)
+
+        if (epoch + 1) % 5 == 0:
+            print("EPOCH: %4d / %4d | LOSS: %2.5f" % (epoch + 1, epochs, loss))
+
         if loss<best_loss:
             best_loss=loss
             torch.save(model, model_fn)
@@ -122,7 +127,7 @@ def run(domain, data_dir, model_dir, valid_split, runs, epochs, lr, dropout, bat
     train_y=ae_data['train_y'][:-valid_split]
 
     for r in range(runs):
-        print(r)
+        print("RUN: %5d / %5d" % (r + 1, runs))
         model=Model(gen_emb, domain_emb, 3, dropout=dropout, crf=False)
         model.cuda()
         parameters = [p for p in model.parameters() if p.requires_grad]
